@@ -1,5 +1,6 @@
 from random_generate import convert_value_to_type, unpack_value_from_type
 from evaluate_value import binary_to_int,max_value_for_type
+from find_user_defined_type import find_user_defined_type
 import random
 import re
 
@@ -35,7 +36,7 @@ def dot_operator_simple(expression, parent, endian, root):
     
     return current_value
 
-def evaluate_condition(condition_string, root, parent, endianness):
+def evaluate_condition(condition_string, root, parent, endianness, parent_string, field=None):
     tokens = re.findall(r'\b\w+(?:\.\w+)*\b|[!=<>+*/%-]+', condition_string)
     print("Tokens:", tokens)
     print("Original condition string HEREEE:", condition_string)
@@ -43,8 +44,9 @@ def evaluate_condition(condition_string, root, parent, endianness):
     # Process each token in the condition string
     for i, token in enumerate(tokens):
         if '.' in token:
+            print("PARENT IN EVALUATE_CONDITION", parent)
             # If the token contains a dot, handle dot operator
-            value = dot_operator(token, root,parent, endianness)
+            value = dot_operator(token, root,parent, endianness,parent_string, field)
             print(f"Handling dot operator for token '{token}', got value: {value}")
             tokens[i] = value  # Replace token with its numeric value
         else:
@@ -78,8 +80,10 @@ def handle_valid(valid_value, field_type, parent, root, endianness, encoding="AS
     
     if isinstance(valid_value, dict):
         if 'min' in valid_value and 'max' in valid_value:
+
             min_value = valid_value['min']
             max_value = valid_value['max']
+            print("MIN AND MAX VALUE IS ", min_value, max_value)
             if isinstance(min_value, str) and '.' in min_value:
                 min_value = evaluate_condition(min_value,root, parent, endianness)
             elif isinstance(min_value, str):
@@ -149,10 +153,22 @@ def handle_valid(valid_value, field_type, parent, root, endianness, encoding="AS
     elif valid_value is not None:
         return convert_value_to_type(valid_value, field_type, endianness, encoding)
 
-def dot_operator(path_string, root, parent, endianness):
+def dot_operator(path_string, root, parent, endianness, parent_string, item):
     tokens = path_string.split('.')
-    current_tree = root if tokens[0] == '_root' else parent
+    #current_tree = root if tokens[0] == '_root' else parent
+    if tokens[0] == '_root':
+        current_tree = root
+    elif tokens[0] == '_':
+        #print(parent)
+        type_dict, string_dummy=find_user_defined_type(item.get('type'), parent_string,root)
+        print("Type dict is ", type_dict)
+        print("Item is in dot_operator ", item)
+        type_name= item.get('type')
+        current_tree= type_dict[type_name]
+    else:
+        current_tree=parent
     start_index = 1 if tokens[0] in ['_root', '_'] else 0
+    print("Token to traverse_to_find_item is ", tokens)
     item= traverse_to_find_item(current_tree, tokens, start_index, root)
     val= item.get('expansion')
     field_type= item.get('type')
@@ -169,20 +185,28 @@ def traverse_to_find_item(current_tree, tokens, index, data_tree):
 
     for item in current_tree['seq']:
         if item.get('id') == token:
+            print("Item.get('id') ", item.get('id'))
             if is_last:
                 # Found the target field
                 # if(item.get('encoding') is not None and item.get('size') is not None):
                 #     item['expansion']=convert_value_to_type(switch_val,item['type'],endianness, item['encoding'], item['size'])
                 # else:
                 #     item['expansion']=convert_value_to_type(switch_val,item['type'],endianness, None , None)
+
                 return item
             field_type = item.get('type')
+            
             if isinstance(field_type, str):
                 # Follow the type reference
                 type_def = data_tree.get('types', {}).get(field_type)
+                print("Reached user defined type", type_def)
                 if not type_def:
+                    print("Error1 in traverse_to_find_item")
                     return None
+                print("Recursive parameters ",type_def, "Tokens ", tokens,  index+1 )
                 return traverse_to_find_item(type_def, tokens, index + 1, data_tree)
             else:
+                print("Error2 in traverse_to_find_item")
                 return None
+    print("Error3 in traverse_to_find_item")
     return None

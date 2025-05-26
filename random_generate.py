@@ -87,10 +87,13 @@ def convert_value_to_type(value, type_field, endianness, encoding=None, size=Non
         encoded_value = str(value).encode(encoding)
         if size:
             if len(encoded_value) > size:
+                print("Converted value in the field truncated size", encoded_value)
                 return encoded_value[:size]  # Truncate if too long
             else:
+                print("Converted value in the field of sometimes padded", encoded_value)
                 return encoded_value.ljust(size, b'\x00')  # Pad with null bytes if too short
         else:
+            print("Converted value is ", encoded_value)
             return encoded_value
     else:
         return b''

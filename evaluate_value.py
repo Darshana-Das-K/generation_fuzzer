@@ -74,11 +74,12 @@ def integer_from_binary(binary_string, endianness):
 '''
 
 def binary_to_int(value, endianness):
+    print("ENDIANNESS IS ", endianness)
     try:
-        if endianness == 'le':
+        if endianness == 'le'or endianness == '<' :
             # Little-endian byte order
             value_int = int.from_bytes(value, byteorder='little')
-        else:
+        elif endianness == 'be'or endianness == '>':
             # Big-endian byte order
             value_int = int.from_bytes(value, byteorder='big')
         return value_int

@@ -46,7 +46,7 @@ def write_leaf_values_to_file(data_tree, output_directory):
 output_directory = 'testcases'
 os.makedirs(output_directory, exist_ok=True)
 # Specify the path to your YAML file
-file_path = '/Users/darshanadask/main_project/generation_fuzzer_final_phase/ksy_files/zip.ksy'
+file_path = '/Users/darshanadask/main_project/generation_fuzzer_final_phase/ksy_files/glibc.ksy'
 
 # Read the YAML data from the file
 with open(file_path, 'r') as file:  

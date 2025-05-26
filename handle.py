@@ -26,7 +26,7 @@ def handle_field(field, endian, parent, root, parent_string):
     endianness= '<' if endian == 'le' else '>'
     content = field.get('contents')
     field_type = field.get('type')
-    size = evaluate_size(field.get('size', 0), endianness, parent, field)
+    size = evaluate_size(field.get('size', 0), root, endianness, parent, field)
     encoding = field.get('encoding')
     enum_name=field.get('enum')
     valid_value=field.get('valid')
@@ -126,7 +126,7 @@ def handle_repeat_field(field, endian, parent,root,  parent_string):
     expansion = handle_field(field, endian, parent,root,parent_string)
     total_expansion += expansion
     append_value_to_node(field, expansion)
-    random_repeat_count = random.randrange(1, 100)
+    random_repeat_count = random.randrange(1, 10)
     for _ in range(1, random_repeat_count):
         expansion = handle_field(field, endian, parent, root,parent_string)
         total_expansion += expansion
@@ -147,7 +147,7 @@ def handle_repeat_expr_field(field, endian, seq, parent,root, parent_string):
             result = repeat_expr
         else:
             #result = evaluate_condition(repeat_expr, seq, endian, field)
-            result= evaluate_condition(repeat_expr,root,parent,endianness)
+            result= evaluate_condition(repeat_expr,root,parent,endianness, parent_string,  field)
     for _ in range(1,result):
         expansion = handle_field(field, endian, parent, root,parent_string)
         total_expansion += expansion
@@ -156,7 +156,7 @@ def handle_repeat_expr_field(field, endian, seq, parent,root, parent_string):
     return total_expansion
 def handle_repeat_until_field(field, endian, seq, parent, root, parent_string):
     endianness= '<' if endian == 'le' else '>'
-    size = evaluate_size(field.get('size', 0), endianness, parent, field)
+    size = evaluate_size(field.get('size', 0),root, endianness, parent, field)
     encoding = field.get('encoding')
     total_expansion=b''
     repeat_expr = field.get('repeat-until')
@@ -172,7 +172,8 @@ def handle_repeat_until_field(field, endian, seq, parent, root, parent_string):
         
     while(max>0):
         expansion = handle_field(field, endian, parent,root, parent_string)
-        result= evaluate_condition(repeat_expr,parent, endian, field)
+        
+        result= evaluate_condition(repeat_expr,root,parent, endianness,parent_string,field)
         total_expansion += expansion
         append_value_to_node(field, expansion)
         if(result==True):
@@ -194,6 +195,7 @@ def handle_repeat_until_field(field, endian, seq, parent, root, parent_string):
 
 def handle_seq(seq, endian, parent,root, parent_string):
     total_expansion = b''
+    endianness= '<' if endian == 'le' else '>'
     ####CHANGED ON 21-05-2025 due to problem in dependency in zip.ksy extra_field type fields: Dependency graph:  {'body': {'len_body'}, 'code': set(), 'len_body': set()} changed te function preprocess_kaitai_struct to add the switch case too.
     dependency_graph = preprocess_kaitai_struct(seq)
     ordered_list = dependency_order(dependency_graph)
@@ -208,7 +210,7 @@ def handle_seq(seq, endian, parent,root, parent_string):
         condition_string= field.get('if')
         if condition_string is not None:
             #print("Seq is: ", seq)
-            result = evaluate_condition(condition_string,parent,endian, field)
+            result = evaluate_condition(condition_string,root,parent,endianness,parent_string, field)
             #print("Result is: ",result)
             if(result==False):
                 continue
@@ -234,7 +236,7 @@ def handle_type(field,field_type,parent,endian, root, parent_string):
     endianness= '<' if endian == 'le' else '>'
     
     #field_type = field.get('type')
-    size = evaluate_size(field.get('size', 0), endianness, parent, field )
+    size = evaluate_size(field.get('size', 0), root,endianness, parent, field )
     encoding = field.get('encoding')
     
     if field_type in ['u1', 'u2', 'u4', 'u8', 's2', 's4', 's8', 'f2', 'f4', 'f8',
@@ -264,7 +266,7 @@ def handle_type(field,field_type,parent,endian, root, parent_string):
         
     else:
         print("USER DEFINED TYPE IS  ",field_type )
-        print("FIELD IS ", field)
+     #   print("FIELD IS ", field)
         expansion = handle_user_defined_type(field, parent, endian, field_type,root, parent_string)
     return expansion
 
@@ -309,7 +311,7 @@ def handle_user_defined_type(field, parent, endian, user_defined_type,data_tree,
     #size_calc_flag = 0
     size_name = field.get('size', 0)
     size_val= len(expansion)
-    if isinstance(size_name, str):
+    if isinstance(size_name, str) and size_name!=None:
         #size_calc_flag = 1
         curr_dict= find_dict(parent_string, data_tree)
         endianness= '<' if endian == 'le' else '>'
@@ -374,7 +376,7 @@ def handle_switch(field,data_tree,parent,endian, parent_string,switch_id,case_di
         #     change_switch_id_for_dot_operator_path(switch_id, parent, data_tree, case_key, endianness)
         # else: 
         if item is not None:
-            print("ITEM IS ", item)
+          #  print("ITEM IS ", item)
             if is_enum_reference(case_dict, item):
                 print("IT IS AN ENUM")
                 case_value= find_case_key(data_tree,parent,item, case_dict, switch_id, endianness)
